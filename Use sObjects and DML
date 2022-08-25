@@ -1,0 +1,54 @@
+//NewAccounts.apxc
+
+public class NewAccounts {
+    public static void sObjectsInsert(){
+        Account store = new Account();
+        store.Name = 'The Tea Factory';
+        store.AccountNumber = '356281';
+        store.Phone = '555-0158';
+        insert store;
+    }
+}
+
+//debug
+NewAccounts.sObjectsInsert();
+
+Account store1 = new Account();
+Account store2 = new Account();
+store1.Name = 'The Tea Factory 1';
+store1.AccountNumber = '356281';
+store1.Phone = '555-0158';
+store2.Name = 'The Tea Factory 2';
+store2.AccountNumber = '356282';
+store2.Phone = '555-4012';
+insert store1;
+insert store2;
+
+//NewAccounts.apxc
+  public class NewAccounts {
+    public static void sObjectsInsert(Integer value){
+        Integer counter = 1;
+        //create a list to add our accounts
+        List<Account> teaFactoryAccounts = new List<Account>();
+        while(counter <= value){
+            //display the current counter value
+            System.debug('Counter Value before Incrementing ' + counter);
+            //create a new account
+            Account store = new Account();
+            store.Name = 'The Tea Factory ' + counter;
+            store.AccountNumber = '35629' + counter;
+            teaFactoryAccounts.add(store);
+            System.debug(teaFactoryAccounts);
+            //increment the counter
+            counter = counter + 1;
+            System.debug('Counter Value after incrementing ' + counter);
+        }
+        System.debug('Size of Account List: ' + teaFactoryAccounts.size() );
+        System.debug('Elements in Account List: ' + teaFactoryAccounts);
+        //insert all of the accounts in the list
+        insert teaFactoryAccounts;
+    }
+}
+
+//debug
+NewAccounts.sObjectsInsert(3);
