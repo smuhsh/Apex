@@ -1,0 +1,94 @@
+public with sharing class Account_tr extends TriggerHandler {
+    private List<Account> listNew {get; set;}
+    private List<Account> listOld {get; set;}
+    private Map<Id, Account> mapNew {get; set;}
+    private Map<Id, Account> mapOld {get; set;}
+
+    public Account_tr(){
+        listNew = (List<Account>)Trigger.new;
+        listOld = (List<Account>)Trigger.old;
+        mapNew = (Map<Id,Account>)Trigger.newMap;
+        mapOld = (Map<Id,Account>)Trigger.oldMap;
+    }
+    
+    public override void beforeInsert(){
+       doInsertAccount();
+    }
+
+    public override void afterInsert(){
+    }
+
+    public override void beforeUpdate(){
+        doUpdateAccount();
+    }
+
+    public override void afterUpdate(){
+        doUpdateContactPhone();
+    }
+
+    public override void beforeDelete(){
+        doDeleteAccount();
+    }
+    
+    //Account의 레코드를 생성하는 경우,  Rating이라는 필드의 값이 존재하지 않을 시 기본 값을 ‘Cold’로 지정함
+    public void doInsertAccount() {
+        for (Account obj : listNew) {
+            if (obj.Rating == null) {
+                obj.Rating = 'Cold';
+            }
+        }
+    }
+    
+    //Account 삭제 시, Rating 값이 'Hot'일 경우 삭제 불가
+    public void doDeleteAccount() {
+        //for-each 문을 사용하여 트리거를 태울 레코드들을 List 형태로 받아옴
+        for (Account obj : listOld) {
+            if (obj.Rating == 'Hot') {
+                obj.addError('Rating의 값이 Hot일 때 삭제할 수 없습니다.');
+            }
+        }
+    }
+    
+     //Account의 Rating 값이 ‘Hot’일 때는 레코드를 수정할 수 없도록 Validation
+    public void doUpdateAccount() {
+        for (Account obj : listNew) {
+            if (obj.Rating == 'Hot' && mapOld.get(obj.Id).Rating == 'Hot') {
+                obj.addError('Rating의 값이 Hot일 때 수정할 수 없습니다.');
+            }
+        }
+    }
+
+    //Account의 Phone 값이 변경될 때(이전값과 다를 때),
+    // 해당 Account에 속한 Contact 레코드의 Home Phone이라는 필드의 값을 변경한 Account의 Phone 값으로 Update (Contact의 값이 존재할 경우에만)
+    public void doUpdateContactPhone() {
+        System.debug('doUpdateContactPhone ::: ');
+        List<Account> listTarget = new List<Account>();
+        Set<Id> setIds = new Set<Id>();
+        Map<Id, String> mapAccountPhone = new Map<Id, String>();
+
+        for (Account obj : listNew) {
+            if (mapOld.get(obj.Id).Phone != obj.Phone) {
+                listTarget.add(obj);
+                setIds.add(obj.Id);
+                mapAccountPhone.put(obj.Id, obj.Phone);
+            }
+        }
+
+        if(!listTarget.isEmpty()) {
+            System.debug('listTarget ::: ' + listTarget);
+            List<Contact> listContact = [
+                    SELECT Id, AccountId, HomePhone
+                    FROM Contact
+                    WHERE AccountId IN: setIds
+            ];
+
+            if (!listContact.isEmpty()) {
+                System.debug('listContact ::: ' + listContact);
+                for (Contact obj : listContact) {
+                    obj.HomePhone = mapAccountPhone.get(obj.AccountId);
+                }
+                update listContact;
+            }
+        }
+    }
+}
